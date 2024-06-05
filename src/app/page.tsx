@@ -1,38 +1,42 @@
-"use client"
+'use client';
 
-import { useState } from "react";
-import { io } from "socket.io-client";
+import { useState, useEffect } from 'react';
+import { io, Socket } from 'socket.io-client';
 
-// import styles from "./page.module.css";
+interface Message {
+  message: string;
+}
 
-export default function Home() {
-  const [message, setMessage] = useState("");
-  const [messageList, setMessageList] = useState([]);
+const Home: React.FC = () => {
+  const [message, setMessage] = useState<string>('');
+  const [messageList, setMessageList] = useState<Message[]>([]);
+  const [socket, setSocket] = useState<Socket | null>(null);
 
-  // Connect with server
-  const socket = io("https://suited-turtle-excited.ngrok-free.app");
+  useEffect(() => {
+    const socketIo = io('https://suited-turtle-excited.ngrok-free.app');
 
-  // Send input message to server
-  const handleSendMessage = () => {
-    // Send to server
-    socket.emit("send_message", {
-      message: message,
+    socketIo.on('received_message', (data: Message) => {
+      setMessageList((prevMessageList) => [...prevMessageList, data]);
     });
 
-    // Reset input after send
-    setMessage("");
+    setSocket(socketIo);
+
+    return () => {
+      socketIo.disconnect();
+    };
+  }, []);
+
+  const handleSendMessage = () => {
+    if (socket && message.trim() !== '') {
+      socket.emit('send_message', { message });
+      setMessage('');
+    }
   };
 
-  // Receive message from server
-  socket.on("received_message", (data) => {
-    // Append to message list
-    setMessageList([...messageList, data]);
-  });
-
   return (
-    <div className={""}>
+    <div>
       <h2>Realtime Chat App</h2>
-      <div className={""}>
+      <div>
         <input
           type="text"
           placeholder="Enter your message."
@@ -41,11 +45,11 @@ export default function Home() {
         />
         <button onClick={handleSendMessage}>Send Message</button>
       </div>
-      {messageList.map((chat) => (
-        <div className={""} key={chat.message}>
-          {chat.message}
-        </div>
+      {messageList.map((chat, index) => (
+        <div key={index}>{chat.message}</div>
       ))}
     </div>
   );
-}
+};
+
+export default Home;
